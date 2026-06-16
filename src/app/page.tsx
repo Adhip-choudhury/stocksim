@@ -42,18 +42,24 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    const p = getPortfolio()
-    setPortfolio(p)
-    if (p.holdings.length > 0) {
-      p.holdings.forEach((h) => fetchQuote(h.symbol, "holdings"))
+    let ignore = false
+    const interval: ReturnType<typeof setInterval>[] = []
+    getPortfolio().then((p) => {
+      if (ignore) return
+      setPortfolio(p)
+      if (p.holdings.length > 0) {
+        p.holdings.forEach((h) => fetchQuote(h.symbol, "holdings"))
+      }
+      TRENDING_SYMBOLS.forEach((s) => fetchQuote(s.symbol, "trending"))
+      setLoading(false)
+      interval.push(setInterval(() => {
+        p.holdings.forEach((h) => fetchQuote(h.symbol, "holdings"))
+      }, 30000))
+    })
+    return () => {
+      ignore = true
+      interval.forEach(clearInterval)
     }
-    TRENDING_SYMBOLS.forEach((s) => fetchQuote(s.symbol, "trending"))
-    setLoading(false)
-
-    const interval = setInterval(() => {
-      p.holdings.forEach((h) => fetchQuote(h.symbol, "holdings"))
-    }, 30000)
-    return () => clearInterval(interval)
   }, [])
 
   if (loading || !portfolio) {
@@ -96,9 +102,9 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
         <button
-          onClick={() => {
-            resetPortfolio()
-            setPortfolio(getPortfolio())
+          onClick={async () => {
+            await resetPortfolio()
+            setPortfolio(await getPortfolio())
           }}
           className="text-sm px-3 py-1.5 rounded bg-[var(--danger)]/10 text-[var(--danger)] hover:bg-[var(--danger)]/20 transition-colors"
         >

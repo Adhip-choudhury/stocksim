@@ -21,7 +21,7 @@ export default function Trade({
   const [loadingQuote, setLoadingQuote] = useState(false)
 
   useEffect(() => {
-    setPortfolio(getPortfolio())
+    getPortfolio().then(setPortfolio)
     searchParams.then((params) => {
       const sym = params.symbol
       if (sym) {
@@ -91,7 +91,7 @@ export default function Trade({
     await loadBySymbol(symbol)
   }, [directSymbol, loadBySymbol])
 
-  const handleBuy = () => {
+  const handleBuy = async () => {
     if (!selected || !quote || !shares) return
     const numShares = parseInt(shares, 10)
     if (isNaN(numShares) || numShares <= 0) {
@@ -99,14 +99,14 @@ export default function Trade({
       return
     }
 
-    const result = buyStock(selected.symbol, selected.name, numShares, quote.price)
+    const result = await buyStock(selected.symbol, selected.name, numShares, quote.price)
     setMessage({
       type: result.success ? "success" : "error",
       text: result.success
         ? `Bought ${numShares} shares of ${selected.symbol} at $${quote.price.toFixed(2)}`
         : result.error || "Transaction failed",
     })
-    setPortfolio(result.state)
+    if (result.state) setPortfolio(result.state)
   }
 
   return (

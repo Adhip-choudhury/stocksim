@@ -1,105 +1,47 @@
 import type { PortfolioState, Holding, Transaction } from "@/types"
+import {
+  getPortfolioFromFirestore,
+  buyStockFirestore,
+  sellStockFirestore,
+  resetPortfolioFirestore,
+  getCashFirestore,
+  getTransactionsFirestore,
+  getHoldingsFirestore,
+} from "./firestore-service"
 
-const STORAGE_KEY = "stock-sim-portfolio"
-const INITIAL_CASH = 100000
-
-export function getPortfolio(): PortfolioState {
-  if (typeof window === "undefined") {
-    return { cash: INITIAL_CASH, holdings: [], transactions: [] }
-  }
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored) {
-    try {
-      return JSON.parse(stored)
-    } catch {
-      // ignore
-    }
-  }
-  return { cash: INITIAL_CASH, holdings: [], transactions: [] }
+export async function getPortfolio(): Promise<PortfolioState> {
+  return getPortfolioFromFirestore()
 }
 
-export function savePortfolio(state: PortfolioState) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-}
-
-export function resetPortfolio(): PortfolioState {
-  const state = { cash: INITIAL_CASH, holdings: [], transactions: [] }
-  savePortfolio(state)
-  return state
-}
-
-export function buyStock(
+export async function buyStock(
   symbol: string,
   name: string,
   shares: number,
   price: number
-): { success: boolean; error?: string; state: PortfolioState } {
-  const state = getPortfolio()
-  const total = shares * price
-
-  if (total > state.cash) {
-    return { success: false, error: "Insufficient funds", state }
-  }
-
-  const existing = state.holdings.find((h) => h.symbol === symbol)
-  if (existing) {
-    const totalCost = existing.avgPrice * existing.shares + total
-    existing.shares += shares
-    existing.avgPrice = totalCost / existing.shares
-  } else {
-    state.holdings.push({ symbol, name, shares, avgPrice: price })
-  }
-
-  state.cash -= total
-  state.transactions.push({
-    id: crypto.randomUUID(),
-    type: "buy",
-    symbol,
-    name,
-    shares,
-    price,
-    total,
-    timestamp: Date.now(),
-  })
-
-  savePortfolio(state)
-  return { success: true, state }
+): Promise<{ success: boolean; error?: string; state: PortfolioState }> {
+  return buyStockFirestore(symbol, name, shares, price)
 }
 
-export function sellStock(
+export async function sellStock(
   symbol: string,
   shares: number,
   price: number
-): { success: boolean; error?: string; state: PortfolioState } {
-  const state = getPortfolio()
-  const holding = state.holdings.find((h) => h.symbol === symbol)
+): Promise<{ success: boolean; error?: string; state: PortfolioState }> {
+  return sellStockFirestore(symbol, shares, price)
+}
 
-  if (!holding) {
-    return { success: false, error: "You don't own this stock", state }
-  }
-  if (shares > holding.shares) {
-    return { success: false, error: "Not enough shares", state }
-  }
+export async function resetPortfolio(): Promise<PortfolioState> {
+  return resetPortfolioFirestore()
+}
 
-  const total = shares * price
-  holding.shares -= shares
+export async function getCash(): Promise<number> {
+  return getCashFirestore()
+}
 
-  if (holding.shares === 0) {
-    state.holdings = state.holdings.filter((h) => h.symbol !== symbol)
-  }
+export async function getTransactions(): Promise<Transaction[]> {
+  return getTransactionsFirestore()
+}
 
-  state.cash += total
-  state.transactions.push({
-    id: crypto.randomUUID(),
-    type: "sell",
-    symbol,
-    name: holding.name,
-    shares,
-    price,
-    total,
-    timestamp: Date.now(),
-  })
-
-  savePortfolio(state)
-  return { success: true, state }
+export async function getHoldings(): Promise<Holding[]> {
+  return getHoldingsFirestore()
 }

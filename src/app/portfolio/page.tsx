@@ -104,16 +104,25 @@ export default function Portfolio() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [chartView, setChartView] = useState<"donut" | "bars">("donut")
 
-  const load = () => {
-    const p = getPortfolio()
-    setPortfolio(p)
-    p.holdings.forEach((h) => fetchQuote(h.symbol))
-  }
-
   useEffect(() => {
-    load()
-    const interval = setInterval(load, 30000)
-    return () => clearInterval(interval)
+    let ignore = false
+    const interval: ReturnType<typeof setInterval>[] = []
+    getPortfolio().then((p) => {
+      if (ignore) return
+      setPortfolio(p)
+      p.holdings.forEach((h) => fetchQuote(h.symbol))
+    })
+    interval.push(setInterval(async () => {
+      const p = await getPortfolio()
+      if (!ignore) {
+        setPortfolio(p)
+        p.holdings.forEach((h) => fetchQuote(h.symbol))
+      }
+    }, 30000))
+    return () => {
+      ignore = true
+      interval.forEach(clearInterval)
+    }
   }, [])
 
   const fetchQuote = async (symbol: string) => {
@@ -128,21 +137,21 @@ export default function Portfolio() {
     }
   }
 
-  const handleSell = (symbol: string, name: string) => {
+  const handleSell = async (symbol: string, name: string) => {
     const shares = parseInt(sellShares[symbol] || "0", 10)
     if (isNaN(shares) || shares <= 0) return
 
     const quote = quotes[symbol]
     if (!quote) return
 
-    const result = sellStock(symbol, shares, quote.price)
+    const result = await sellStock(symbol, shares, quote.price)
     setMessage({
       type: result.success ? "success" : "error",
       text: result.success
         ? `Sold ${shares} shares of ${symbol} at $${quote.price.toFixed(2)}`
         : result.error || "Transaction failed",
     })
-    setPortfolio(result.state)
+    if (result.state) setPortfolio(result.state)
     setSellShares((prev) => ({ ...prev, [symbol]: "" }))
   }
 

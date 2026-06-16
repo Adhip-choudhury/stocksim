@@ -1,15 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import type { PortfolioState, Transaction } from "@/types"
+import type { Transaction } from "@/types"
 import { getPortfolio } from "@/lib/portfolio"
 
 export default function History() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
 
   useEffect(() => {
-    const p = getPortfolio()
-    setTransactions([...p.transactions].reverse())
+    getPortfolio().then((p) => setTransactions([...p.transactions].reverse()))
   }, [])
 
   return (

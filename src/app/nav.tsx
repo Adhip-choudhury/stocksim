@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
@@ -16,6 +17,7 @@ const LINKS = [
 
 export default function NavBar() {
   const [open, setOpen] = useState(false)
+  const { user, logout } = useAuth()
 
   return (
     <nav className="border-b border-[var(--border)] px-4 sm:px-6 py-3 flex items-center justify-between bg-[var(--card)] relative z-50">
@@ -44,12 +46,23 @@ export default function NavBar() {
         </svg>
       </button>
 
-      <div className="hidden sm:flex gap-4 lg:gap-6 text-sm">
+      <div className="hidden sm:flex items-center gap-4 lg:gap-6 text-sm">
         {LINKS.map((l) => (
           <Link key={l.href} href={l.href} className="hover:text-[var(--primary)] transition-colors whitespace-nowrap">
             {l.label}
           </Link>
         ))}
+        {user && (
+          <div className="flex items-center gap-3 pl-4 border-l border-[var(--border)]">
+            <span className="text-xs text-[var(--muted)] truncate max-w-[120px]">{user.email}</span>
+            <button
+              onClick={logout}
+              className="text-xs px-2.5 py-1 rounded bg-[var(--danger)]/10 text-[var(--danger)] hover:bg-[var(--danger)]/20 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
+        )}
       </div>
 
       {open && (
@@ -67,6 +80,17 @@ export default function NavBar() {
                   {l.label}
                 </Link>
               ))}
+              {user && (
+                <div className="border-t border-[var(--border)] mt-2 pt-2 px-6">
+                  <div className="text-xs text-[var(--muted)] truncate mb-2">{user.email}</div>
+                  <button
+                    onClick={() => { logout(); setOpen(false) }}
+                    className="text-sm px-3 py-1.5 rounded bg-[var(--danger)]/10 text-[var(--danger)] hover:bg-[var(--danger)]/20 transition-colors w-full text-left"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </>

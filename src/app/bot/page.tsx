@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import type { BotConfig, BotRule, BotAction } from "@/types"
 import { getBotConfig, saveBotConfig, getBotActions, addBotAction, clearBotActions, createRule } from "@/lib/bot"
+import { buyStock, sellStock, getPortfolio } from "@/lib/portfolio"
 
 const CONDITION_LABELS: Record<string, string> = {
   price_drop_pct: "Price Drop %",
@@ -20,84 +21,29 @@ const CONDITION_DESCS: Record<string, string> = {
   rsi_overbought: "Trigger when RSI goes above X (overbought)",
 }
 
-function liveBuyStock(symbol: string, name: string, shares: number, price: number): boolean {
-  const raw = localStorage.getItem("stock-sim-portfolio")
-  if (!raw) return false
-  const state = JSON.parse(raw)
-  const total = shares * price
-  if (total > state.cash) return false
-  const existing = state.holdings.find((h: { symbol: string }) => h.symbol === symbol)
-  if (existing) {
-    const totalCost = existing.avgPrice * existing.shares + total
-    existing.shares += shares
-    existing.avgPrice = totalCost / existing.shares
-  } else {
-    state.holdings.push({ symbol, name, shares, avgPrice: price })
-  }
-  state.cash -= total
-  state.transactions.push({
-    id: crypto.randomUUID(),
-    type: "buy",
-    symbol,
-    name,
-    shares,
-    price,
-    total,
-    timestamp: Date.now(),
-  })
-  localStorage.setItem("stock-sim-portfolio", JSON.stringify(state))
-  return true
-}
-
-function liveSellStock(symbol: string, price: number): boolean {
-  const raw = localStorage.getItem("stock-sim-portfolio")
-  if (!raw) return false
-  const state = JSON.parse(raw)
-  const holding = state.holdings.find((h: { symbol: string }) => h.symbol === symbol)
-  if (!holding) return false
-  const total = holding.shares * price
-  state.cash += total
-  state.transactions.push({
-    id: crypto.randomUUID(),
-    type: "sell",
-    symbol,
-    name: holding.name,
-    shares: holding.shares,
-    price,
-    total,
-    timestamp: Date.now(),
-  })
-  state.holdings = state.holdings.filter((h: { symbol: string }) => h.symbol !== symbol)
-  localStorage.setItem("stock-sim-portfolio", JSON.stringify(state))
-  return true
-}
-
-function botConfigFromStorage(): BotConfig {
-  if (typeof window === "undefined") return createEmpty()
-  return getBotConfig()
-}
-
 function createEmpty(): BotConfig {
   return { enabled: false, capital: 3000, usedCapital: 0, checkInterval: 60, rules: [], watchedSymbols: [], lastPrices: {}, lastRun: null }
 }
 
 export default function BotPage() {
-  const [config, setConfig] = useState<BotConfig>(botConfigFromStorage)
-  const [actions, setActions] = useState<BotAction[]>(() => {
-    if (typeof window === "undefined") return []
-    return getBotActions()
-  })
+  const [config, setConfig] = useState<BotConfig>(createEmpty)
+  const [actions, setActions] = useState<BotAction[]>([])
   const [log, setLog] = useState<string[]>([])
   const [running, setRunning] = useState(false)
   const [editSymbol, setEditSymbol] = useState("")
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    getBotConfig().then(setConfig)
+    getBotActions().then(setActions)
+  }, [])
 
   const addLog = useCallback((msg: string) => {
     setLog((prev) => [...prev.slice(-49), `[${new Date().toLocaleTimeString()}] ${msg}`])
   }, [])
 
   const runCycle = useCallback(async () => {
-    const cfg = getBotConfig()
+    const cfg = await getBotConfig()
     if (!cfg.enabled) return
     setRunning(true)
     try {
@@ -115,25 +61,29 @@ export default function BotPage() {
       if (data.prices) {
         const updated = { ...cfg, lastPrices: data.prices, lastRun: Date.now() }
         setConfig(updated)
-        saveBotConfig(updated)
+        await saveBotConfig(updated)
       }
       if (data.actions && data.actions.length > 0) {
         let totalSpent = 0
         for (const a of data.actions) {
           if (a.shares > 0 && a.action === "buy") {
-            const success = liveBuyStock(a.symbol, a.name, a.shares, a.price)
-            if (success) {
+            const result = await buyStock(a.symbol, a.name, a.shares, a.price)
+            if (result.success) {
               totalSpent += a.total
               const action: BotAction = { ...a, timestamp: Date.now() }
-              addBotAction(action)
+              await addBotAction(action)
               addLog(`Bought ${a.shares} ${a.symbol} @ $${a.price.toFixed(2)} — ${a.reason}`)
             }
           } else if (a.action === "sell" && a.shares === 0) {
-            const sold = liveSellStock(a.symbol, a.price)
-            if (sold) {
-              const action: BotAction = { ...a, shares: 0, action: "sell", timestamp: Date.now() }
-              addBotAction(action)
-              addLog(`Sold ${a.symbol} @ $${a.price.toFixed(2)} — ${a.reason}`)
+            const pf = await getPortfolio()
+            const holding = pf.holdings.find((h) => h.symbol === a.symbol)
+            if (holding) {
+              const result = await sellStock(a.symbol, holding.shares, a.price)
+              if (result.success) {
+                const action: BotAction = { ...a, shares: 0, action: "sell", timestamp: Date.now() }
+                await addBotAction(action)
+                addLog(`Sold ${a.symbol} @ $${a.price.toFixed(2)} — ${a.reason}`)
+              }
             }
           } else {
             addLog(`Info: ${a.reason}`)
@@ -142,9 +92,9 @@ export default function BotPage() {
         if (totalSpent > 0) {
           const updated = { ...cfg, usedCapital: cfg.usedCapital + totalSpent, lastPrices: data.prices, lastRun: Date.now() }
           setConfig(updated)
-          saveBotConfig(updated)
+          await saveBotConfig(updated)
         }
-        setActions(getBotActions())
+        setActions(await getBotActions())
       } else {
         addLog("No rules triggered")
       }
@@ -160,22 +110,17 @@ export default function BotPage() {
     const id = setInterval(() => runCycle(), config.checkInterval * 1000)
     intervalRef.current = id
     return () => { clearInterval(id) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.enabled, config.checkInterval])
+  }, [config.enabled, config.checkInterval, runCycle])
 
-  const toggleBot = () => {
+  const toggleBot = async () => {
     const next = !config.enabled
     const updated = { ...config, enabled: next }
     setConfig(updated)
-    saveBotConfig(updated)
-    if (next) {
-      addLog("Bot started")
-    } else {
-      addLog("Bot stopped")
-    }
+    await saveBotConfig(updated)
+    addLog(next ? "Bot started" : "Bot stopped")
   }
 
-  const addRuleForSymbol = () => {
+  const addRuleForSymbol = async () => {
     const sym = editSymbol.trim().toUpperCase()
     if (!sym) return
     if (config.rules.find((r) => r.symbol === sym)) {
@@ -185,12 +130,12 @@ export default function BotPage() {
     const rule = createRule(sym, sym)
     const updated = { ...config, rules: [...config.rules, rule], watchedSymbols: [...new Set([...config.watchedSymbols, sym])] }
     setConfig(updated)
-    saveBotConfig(updated)
+    await saveBotConfig(updated)
     setEditSymbol("")
     addLog(`Added rule for ${sym}`)
   }
 
-  const removeRule = (id: string) => {
+  const removeRule = async (id: string) => {
     const rule = config.rules.find((r) => r.id === id)
     const updated = { ...config, rules: config.rules.filter((r) => r.id !== id) }
     if (rule) {
@@ -200,39 +145,39 @@ export default function BotPage() {
       }
     }
     setConfig(updated)
-    saveBotConfig(updated)
+    await saveBotConfig(updated)
   }
 
-  const updateRule = (id: string, field: keyof BotRule, value: unknown) => {
+  const updateRule = async (id: string, field: keyof BotRule, value: unknown) => {
     const updated = {
       ...config,
       rules: config.rules.map((r) => (r.id === id ? { ...r, [field]: value } : r)),
     }
     setConfig(updated)
-    saveBotConfig(updated)
+    await saveBotConfig(updated)
   }
 
-  const updateCapital = (val: number) => {
+  const updateCapital = async (val: number) => {
     const updated = { ...config, capital: val }
     setConfig(updated)
-    saveBotConfig(updated)
+    await saveBotConfig(updated)
   }
 
-  const updateInterval = (val: number) => {
+  const updateInterval = async (val: number) => {
     const updated = { ...config, checkInterval: val }
     setConfig(updated)
-    saveBotConfig(updated)
+    await saveBotConfig(updated)
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
       intervalRef.current = null
     }
-    clearBotActions()
+    await clearBotActions()
     const fresh = createEmpty()
     setConfig(fresh)
-    saveBotConfig(fresh)
+    await saveBotConfig(fresh)
     setActions([])
     setLog([])
   }
@@ -270,7 +215,7 @@ export default function BotPage() {
             type="number"
             value={config.capital}
             onChange={(e) => updateCapital(parseInt(e.target.value) || 0)}
-            className="text-2xl font-bold bg-transparent w-full focus:outline-none mt-1"
+            className="text-xl sm:text-2xl font-bold bg-transparent w-full focus:outline-none mt-1"
           />
           <div className="h-2 rounded-full bg-[var(--background)] overflow-hidden mt-2">
             <div
@@ -286,7 +231,7 @@ export default function BotPage() {
             <span>${(config.capital - config.usedCapital).toLocaleString()} free</span>
           </div>
         </div>
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4">
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-3 sm:p-4">
           <div className="text-sm text-[var(--muted)]">Check Interval</div>
           <div className="flex items-center gap-2 mt-1">
             <input

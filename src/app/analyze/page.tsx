@@ -57,7 +57,7 @@ export default function AnalyzePage() {
   const runAnalysis = async () => {
     setLoading(true)
     setError("")
-    const portfolio = getPortfolio()
+    const portfolio = await getPortfolio()
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -79,7 +79,7 @@ export default function AnalyzePage() {
   useEffect(() => {
     let ignore = false
     async function load() {
-      const portfolio = getPortfolio()
+      const portfolio = await getPortfolio()
       try {
         const res = await fetch("/api/analyze", {
           method: "POST",

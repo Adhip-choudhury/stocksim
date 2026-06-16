@@ -1,21 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { AgentConfig, AgentAction } from "@/types"
-import { getPortfolio } from "@/lib/portfolio"
+import { getPortfolio, buyStock, sellStock } from "@/lib/portfolio"
 import { getAgentConfig, saveAgentConfig, getAgentActions, addAgentAction, clearAgentActions } from "@/lib/agent"
 
 const defaultConfig: AgentConfig = { enabled: false, fixedLimit: 5000, usedLimit: 0, instructions: "", lastRun: null }
-
-function initConfig(): AgentConfig {
-  if (typeof window === "undefined") return defaultConfig
-  return getAgentConfig()
-}
-
-function initActions(): AgentAction[] {
-  if (typeof window === "undefined") return []
-  return getAgentActions()
-}
 
 interface ProposedAction {
   type: "buy" | "sell" | "info"
@@ -28,19 +18,24 @@ interface ProposedAction {
 }
 
 export default function AgentPage() {
-  const [config, setConfig] = useState<AgentConfig>(initConfig)
-  const [actions, setActions] = useState<AgentAction[]>(initActions)
+  const [config, setConfig] = useState<AgentConfig>(defaultConfig)
+  const [actions, setActions] = useState<AgentAction[]>([])
   const [proposed, setProposed] = useState<ProposedAction[]>([])
   const [running, setRunning] = useState(false)
   const [message, setMessage] = useState("")
   const [editingLimit, setEditingLimit] = useState(false)
+
+  useEffect(() => {
+    getAgentConfig().then(setConfig)
+    getAgentActions().then(setActions)
+  }, [])
 
   const runAgent = async () => {
     if (!config.instructions.trim()) {
       setMessage("Enter instructions for the AI agent first.")
       return
     }
-    const portfolio = getPortfolio()
+    const portfolio = await getPortfolio()
     setRunning(true)
     setMessage("")
     setProposed([])
@@ -67,13 +62,13 @@ export default function AgentPage() {
     setRunning(false)
   }
 
-  const executeActions = () => {
+  const executeActions = async () => {
     const newActions: AgentAction[] = []
     let totalSpent = 0
 
     for (const a of proposed) {
       if (a.type === "buy" && a.symbol && a.shares && a.price) {
-        const result = buyStock(a.symbol, a.name || a.symbol, a.shares, a.price)
+        const result = await buyStock(a.symbol, a.name || a.symbol, a.shares, a.price)
         if (result.success) {
           const action: AgentAction = {
             id: crypto.randomUUID(),
@@ -90,7 +85,7 @@ export default function AgentPage() {
           totalSpent += action.total || 0
         }
       } else if (a.type === "sell" && a.symbol && a.shares && a.price) {
-        const result = sellStock(a.symbol, a.shares, a.price)
+        const result = await sellStock(a.symbol, a.shares, a.price)
         if (result.success) {
           const action: AgentAction = {
             id: crypto.randomUUID(),
@@ -108,41 +103,41 @@ export default function AgentPage() {
       }
     }
 
-    for (const a of newActions) addAgentAction(a)
-    setActions(getAgentActions())
+    for (const a of newActions) await addAgentAction(a)
+    setActions(await getAgentActions())
 
     const updatedConfig = { ...config, usedLimit: config.usedLimit + totalSpent, lastRun: Date.now() }
-    saveAgentConfig(updatedConfig)
+    await saveAgentConfig(updatedConfig)
     setConfig(updatedConfig)
     setProposed([])
     setMessage(`Executed ${newActions.length} action${newActions.length > 1 ? "s" : ""}. Total spent: $${totalSpent.toFixed(2)}`)
   }
 
-  const clearAll = () => {
-    clearAgentActions()
+  const clearAll = async () => {
+    await clearAgentActions()
     const reset = { ...config, usedLimit: 0 }
-    saveAgentConfig(reset)
+    await saveAgentConfig(reset)
     setConfig(reset)
     setActions([])
     setProposed([])
     setMessage("Agent history cleared.")
   }
 
-  const toggleAgent = () => {
+  const toggleAgent = async () => {
     const updated = { ...config, enabled: !config.enabled }
-    saveAgentConfig(updated)
+    await saveAgentConfig(updated)
     setConfig(updated)
   }
 
-  const updateLimit = (val: number) => {
+  const updateLimit = async (val: number) => {
     const updated = { ...config, fixedLimit: val }
-    saveAgentConfig(updated)
+    await saveAgentConfig(updated)
     setConfig(updated)
   }
 
-  const updateInstructions = (val: string) => {
+  const updateInstructions = async (val: string) => {
     const updated = { ...config, instructions: val }
-    saveAgentConfig(updated)
+    await saveAgentConfig(updated)
     setConfig(updated)
   }
 
@@ -391,67 +386,4 @@ export default function AgentPage() {
       </div>
     </div>
   )
-}
-
-function buyStock(
-  symbol: string,
-  name: string,
-  shares: number,
-  price: number
-): { success: boolean; error?: string } {
-  const state = JSON.parse(localStorage.getItem("stock-sim-portfolio") || "null")
-  if (!state) return { success: false, error: "No portfolio" }
-  const total = shares * price
-  if (total > state.cash) return { success: false, error: "Insufficient funds" }
-  const existing = state.holdings.find((h: { symbol: string }) => h.symbol === symbol)
-  if (existing) {
-    const totalCost = existing.avgPrice * existing.shares + total
-    existing.shares += shares
-    existing.avgPrice = totalCost / existing.shares
-  } else {
-    state.holdings.push({ symbol, name, shares, avgPrice: price })
-  }
-  state.cash -= total
-  state.transactions.push({
-    id: crypto.randomUUID(),
-    type: "buy",
-    symbol,
-    name,
-    shares,
-    price,
-    total,
-    timestamp: Date.now(),
-  })
-  localStorage.setItem("stock-sim-portfolio", JSON.stringify(state))
-  return { success: true }
-}
-
-function sellStock(
-  symbol: string,
-  shares: number,
-  price: number
-): { success: boolean; error?: string } {
-  const state = JSON.parse(localStorage.getItem("stock-sim-portfolio") || "null")
-  if (!state) return { success: false, error: "No portfolio" }
-  const holding = state.holdings.find((h: { symbol: string }) => h.symbol === symbol)
-  if (!holding) return { success: false, error: "You don't own this stock" }
-  if (shares > holding.shares) return { success: false, error: "Not enough shares" }
-  const total = shares * price
-  holding.shares -= shares
-  if (holding.shares === 0) {
-    state.holdings = state.holdings.filter((h: { symbol: string }) => h.symbol !== symbol)
-  }
-  state.cash += total
-  state.transactions.push({
-    id: crypto.randomUUID(),
-    type: "sell",
-    symbol,
-    name: holding.name,
-    shares,
-    price,
-    total,
-    timestamp: Date.now(),
-  })
-  localStorage.setItem("stock-sim-portfolio", JSON.stringify(state))
-  return { success: true }
 }
