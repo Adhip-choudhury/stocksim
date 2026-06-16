@@ -153,9 +153,9 @@ export default function Portfolio() {
   if (portfolio.holdings.length === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Portfolio</h1>
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-12 text-center">
-          <div className="text-4xl mb-3">📭</div>
+        <h1 className="text-xl sm:text-2xl font-bold">Portfolio</h1>
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-8 sm:p-12 text-center">
+          <div className="text-3xl sm:text-4xl mb-3">📭</div>
           <p className="text-[var(--muted)]">Your portfolio is empty.</p>
           <p className="text-sm text-[var(--muted)] mt-1">
             <a href="/trade" className="text-[var(--primary)] hover:underline">
@@ -170,12 +170,12 @@ export default function Portfolio() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Portfolio</h1>
+      <h1 className="text-xl sm:text-2xl font-bold">Portfolio</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Allocation</h2>
+            <h2 className="text-base sm:text-lg font-semibold">Allocation</h2>
             <div className="flex gap-1 bg-[var(--background)] rounded-lg p-0.5">
               <button
                 onClick={() => setChartView("donut")}
@@ -208,8 +208,8 @@ export default function Portfolio() {
           )}
         </div>
 
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-5">
-          <h2 className="text-lg font-semibold mb-4">Summary</h2>
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Summary</h2>
           <div className="space-y-3">
             {(() => {
               const totalVal = portfolio.holdings.reduce(
@@ -246,19 +246,20 @@ export default function Portfolio() {
         </div>
       </div>
 
-      <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-5">
-        <div className="overflow-x-auto">
+      <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5">
+        <div className="overflow-x-auto -mx-4 sm:-mx-0">
+          <div className="min-w-[650px] px-4 sm:px-0">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[var(--muted)] border-b border-[var(--border)]">
-                <th className="text-left py-2 px-3">Symbol</th>
-                <th className="text-left py-2 px-3">Name</th>
-                <th className="text-right py-2 px-3">Shares</th>
-                <th className="text-right py-2 px-3">Current Price</th>
-                <th className="text-right py-2 px-3">Buy Price</th>
-                <th className="text-right py-2 px-3">Current Value</th>
-                <th className="text-right py-2 px-3">P&amp;L</th>
-                <th className="text-right py-2 px-3">Sell</th>
+                <th className="text-left py-2 px-2 sm:px-3">Symbol</th>
+                <th className="text-left py-2 px-2 sm:px-3 hidden sm:table-cell">Name</th>
+                <th className="text-right py-2 px-2 sm:px-3">Shares</th>
+                <th className="text-right py-2 px-2 sm:px-3">Price</th>
+                <th className="text-right py-2 px-2 sm:px-3 hidden sm:table-cell">Buy</th>
+                <th className="text-right py-2 px-2 sm:px-3 hidden md:table-cell">Value</th>
+                <th className="text-right py-2 px-2 sm:px-3">P&amp;L</th>
+                <th className="text-right py-2 px-2 sm:px-3">Sell</th>
               </tr>
             </thead>
             <tbody>
@@ -271,10 +272,10 @@ export default function Portfolio() {
                 const plPercent = ((price - h.avgPrice) / h.avgPrice) * 100
                 return (
                   <tr key={h.symbol} className="border-b border-[var(--border)]/50">
-                    <td className="py-3 px-3 font-medium">{h.symbol}</td>
-                    <td className="py-3 px-3 text-[var(--muted)]">{h.name}</td>
-                    <td className="py-3 px-3 text-right">{h.shares}</td>
-                    <td className="py-3 px-3 text-right">
+                    <td className="py-2 sm:py-3 px-2 sm:px-3 font-medium">{h.symbol}</td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-[var(--muted)] hidden sm:table-cell">{h.name}</td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">{h.shares}</td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">
                       {quote ? (
                         <span className={quote.change >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}>
                           ${price.toFixed(2)}
@@ -283,16 +284,16 @@ export default function Portfolio() {
                         <span className="text-[var(--muted)]">—</span>
                       )}
                     </td>
-                    <td className="py-3 px-3 text-right text-[var(--muted)]">${h.avgPrice.toFixed(2)}</td>
-                    <td className="py-3 px-3 text-right">${value.toFixed(2)}</td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-right text-[var(--muted)] hidden sm:table-cell">${h.avgPrice.toFixed(2)}</td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-right hidden md:table-cell">${value.toFixed(2)}</td>
                     <td
-                      className={`py-3 px-3 text-right ${pl >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}`}
+                      className={`py-2 sm:py-3 px-2 sm:px-3 text-right ${pl >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}`}
                     >
                       {pl >= 0 ? "+" : ""}${pl.toFixed(2)} ({plPercent >= 0 ? "+" : ""}
                       {plPercent.toFixed(2)}%)
                     </td>
-                    <td className="py-3 px-3 text-right">
-                      <div className="flex gap-2 items-center justify-end">
+                    <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">
+                      <div className="flex gap-1 sm:gap-2 items-center justify-end">
                         <input
                           type="number"
                           min="1"
@@ -302,11 +303,11 @@ export default function Portfolio() {
                             setSellShares((prev) => ({ ...prev, [h.symbol]: e.target.value }))
                           }
                           placeholder="Qty"
-                          className="w-16 px-2 py-1 rounded bg-[var(--background)] border border-[var(--border)] text-xs text-center focus:outline-none focus:border-[var(--primary)]"
+                          className="w-14 sm:w-16 px-1 sm:px-2 py-1 rounded bg-[var(--background)] border border-[var(--border)] text-xs text-center focus:outline-none focus:border-[var(--primary)]"
                         />
                         <button
                           onClick={() => handleSell(h.symbol, h.name)}
-                          className="px-2.5 py-1 rounded bg-[var(--danger)]/10 text-[var(--danger)] text-xs hover:bg-[var(--danger)]/20 transition-colors"
+                          className="px-2 sm:px-2.5 py-1 rounded bg-[var(--danger)]/10 text-[var(--danger)] text-xs hover:bg-[var(--danger)]/20 transition-colors"
                         >
                           Sell
                         </button>
@@ -317,6 +318,7 @@ export default function Portfolio() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 

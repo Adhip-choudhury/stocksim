@@ -93,8 +93,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
         <button
           onClick={() => {
             resetPortfolio()
@@ -106,8 +106,8 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5">
           <div className="text-sm text-[var(--muted)]">Portfolio Value</div>
           <div className="text-2xl font-bold mt-1">
             ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -135,19 +135,20 @@ export default function Dashboard() {
       </div>
 
       {portfolio.holdings.length > 0 && (
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-5">
-          <h2 className="text-lg font-semibold mb-4">Holdings</h2>
-          <div className="overflow-x-auto">
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Holdings</h2>
+          <div className="overflow-x-auto -mx-4 sm:-mx-0">
+            <div className="min-w-[600px] px-4 sm:px-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[var(--muted)] border-b border-[var(--border)]">
-                  <th className="text-left py-2 px-3">Symbol</th>
-                  <th className="text-left py-2 px-3">Name</th>
-                  <th className="text-right py-2 px-3">Shares</th>
-                  <th className="text-right py-2 px-3">Current Price</th>
-                  <th className="text-right py-2 px-3">Buy Price</th>
-                  <th className="text-right py-2 px-3">Current Value</th>
-                  <th className="text-right py-2 px-3">P&amp;L</th>
+                  <th className="text-left py-2 px-2 sm:px-3">Symbol</th>
+                  <th className="text-left py-2 px-2 sm:px-3 hidden sm:table-cell">Name</th>
+                  <th className="text-right py-2 px-2 sm:px-3">Shares</th>
+                  <th className="text-right py-2 px-2 sm:px-3">Price</th>
+                  <th className="text-right py-2 px-2 sm:px-3 hidden sm:table-cell">Buy</th>
+                  <th className="text-right py-2 px-2 sm:px-3 hidden md:table-cell">Value</th>
+                  <th className="text-right py-2 px-2 sm:px-3">P&amp;L</th>
                 </tr>
               </thead>
               <tbody>
@@ -160,10 +161,10 @@ export default function Dashboard() {
                   const plPercent = ((price - h.avgPrice) / h.avgPrice) * 100
                   return (
                     <tr key={h.symbol} className="border-b border-[var(--border)]/50">
-                      <td className="py-3 px-3 font-medium">{h.symbol}</td>
-                      <td className="py-3 px-3 text-[var(--muted)]">{h.name}</td>
-                      <td className="py-3 px-3 text-right">{h.shares}</td>
-                      <td className="py-3 px-3 text-right">
+                      <td className="py-2 sm:py-3 px-2 sm:px-3 font-medium">{h.symbol}</td>
+                      <td className="py-2 sm:py-3 px-2 sm:px-3 text-[var(--muted)] hidden sm:table-cell">{h.name}</td>
+                      <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">{h.shares}</td>
+                      <td className="py-2 sm:py-3 px-2 sm:px-3 text-right">
                         {quote ? (
                           <span className={quote.change >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}>
                             ${price.toFixed(2)}
@@ -172,9 +173,9 @@ export default function Dashboard() {
                           <span className="text-[var(--muted)]">—</span>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-right text-[var(--muted)]">${h.avgPrice.toFixed(2)}</td>
-                      <td className="py-3 px-3 text-right">${value.toFixed(2)}</td>
-                      <td className={`py-3 px-3 text-right ${pl >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
+                      <td className="py-2 sm:py-3 px-2 sm:px-3 text-right text-[var(--muted)] hidden sm:table-cell">${h.avgPrice.toFixed(2)}</td>
+                      <td className="py-2 sm:py-3 px-2 sm:px-3 text-right hidden md:table-cell">${value.toFixed(2)}</td>
+                      <td className={`py-2 sm:py-3 px-2 sm:px-3 text-right ${pl >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
                         {pl >= 0 ? "+" : ""}${pl.toFixed(2)} ({plPercent >= 0 ? "+" : ""}{plPercent.toFixed(2)}%)
                       </td>
                     </tr>
@@ -182,13 +183,14 @@ export default function Dashboard() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
 
       {portfolio.holdings.length === 0 && (
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-12 text-center">
-          <div className="text-4xl mb-3">📈</div>
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-8 sm:p-12 text-center">
+          <div className="text-3xl sm:text-4xl mb-3">📈</div>
           <p className="text-[var(--muted)] mb-1">No holdings yet</p>
           <p className="text-sm text-[var(--muted)]">
             Start by{" "}
@@ -200,8 +202,8 @@ export default function Dashboard() {
       )}
 
       {concentrationTips.length > 0 && (
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-5">
-          <h2 className="text-lg font-semibold mb-3">💡 Suggestions</h2>
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5">
+          <h2 className="text-base sm:text-lg font-semibold mb-3">💡 Suggestions</h2>
           <div className="space-y-2">
             {concentrationTips.map((tip, i) => (
               <p key={i} className="text-sm leading-relaxed">{tip}</p>
@@ -214,8 +216,8 @@ export default function Dashboard() {
       )}
 
       {!portfolio.holdings.length && (
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-5">
-          <h2 className="text-lg font-semibold mb-3">💡 Suggestions</h2>
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5">
+          <h2 className="text-base sm:text-lg font-semibold mb-3">💡 Suggestions</h2>
           <p className="text-sm leading-relaxed">
             Start building your portfolio! Try buying a mix of stocks from different sectors like tech (AAPL, MSFT),
             finance (HDFCBANK.NS), and auto (TSLA) for good diversification.
@@ -226,8 +228,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-5">
-        <h2 className="text-lg font-semibold mb-4">🔥 Trending Stocks</h2>
+      <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5">
+        <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">🔥 Trending Stocks</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           {TRENDING_SYMBOLS.map((s) => {
             const q = trending[s.symbol]

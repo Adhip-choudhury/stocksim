@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
+import NavBar from "./nav"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,26 +26,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <nav className="border-b border-[var(--border)] px-6 py-3 flex items-center justify-between bg-[var(--card)]">
-          <a href="/" className="text-xl font-bold text-[var(--primary)]">
-            StockSim
-          </a>
-          <div className="flex gap-6 text-sm">
-            <a href="/" className="hover:text-[var(--primary)] transition-colors">
-              Dashboard
-            </a>
-            <a href="/trade" className="hover:text-[var(--primary)] transition-colors">
-              Trade
-            </a>
-            <a href="/portfolio" className="hover:text-[var(--primary)] transition-colors">
-              Portfolio
-            </a>
-            <a href="/history" className="hover:text-[var(--primary)] transition-colors">
-              History
-            </a>
-          </div>
-        </nav>
-        <main className="flex-1 p-6 max-w-6xl w-full mx-auto">{children}</main>
+        <NavBar />
+        <main className="flex-1 px-3 sm:px-6 py-4 sm:py-6 max-w-6xl w-full mx-auto">{children}</main>
       </body>
     </html>
   )

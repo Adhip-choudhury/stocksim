@@ -111,11 +111,11 @@ export default function Trade({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Trade</h1>
+      <h1 className="text-xl sm:text-2xl font-bold">Trade</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-5">
-          <h2 className="text-lg font-semibold mb-4">Search Stocks</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Search Stocks</h2>
           <div className="relative">
             <input
               type="text"
@@ -175,8 +175,8 @@ export default function Trade({
           </div>
         </div>
 
-        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-5">
-          <h2 className="text-lg font-semibold mb-4">Place Order</h2>
+        <div className="rounded-xl bg-[var(--card)] border border-[var(--border)] p-4 sm:p-5">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Place Order</h2>
 
           {!selected && (
             <p className="text-[var(--muted)]">Search or enter a ticker symbol to start trading.</p>
